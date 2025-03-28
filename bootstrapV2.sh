@@ -3,14 +3,6 @@
 # Exit on any error
 set -e
 
-# Default values (can be overridden by args or params file)
-DEFAULT_LOCATION="eastus"
-DEFAULT_STORAGE_ACCOUNT_NAME="mystorage$(date +%s)"
-DEFAULT_VNET_NAME="my-vnet"
-DEFAULT_SUBNET_NAME="my-subnet"
-DEFAULT_DNS_ZONE_NAME="privatelink.blob.core.windows.net"
-DEFAULT_CONTAINER_NAME="tfstate"
-
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -28,6 +20,7 @@ check_status() {
 usage() {
     echo "Usage: $0 [-f <params_file>] [-r <resource_group>] [-l <location>] [-s <storage_account_name>] [-v <vnet_name>] [-n <subnet_name>] [-d <dns_subscription_id>] [-g <dns_resource_group>] [-z <dns_zone_name>] [-c <container_name>]"
     echo "  -f: Path to parameters file (e.g., params_dev.json)"
+    echo "  Required parameters: resourceGroup, location, storageAccountName, vnetName, subnetName, dnsSubscriptionId, dnsResourceGroup, dnsZoneName, containerName"
     echo "  Example with file: $0 -f params_dev.json"
     echo "  Example with args: $0 -r my-rg -l eastus -s mystorage123 -v my-vnet -n my-subnet -d <dns-sub-id> -g dns-rg -z privatelink.blob.core.windows.net -c tfstate"
     exit 1
@@ -69,24 +62,17 @@ if [ -n "$PARAMS_FILE" ]; then
     CONTAINER_NAME=$(jq -r '.containerName // empty' "$PARAMS_FILE")
 fi
 
-# Set defaults if not provided
-RESOURCE_GROUP=${RESOURCE_GROUP:-$RESOURCE_GROUP}
-LOCATION=${LOCATION:-$DEFAULT_LOCATION}
-STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-$DEFAULT_STORAGE_ACCOUNT_NAME}
-VNET_NAME=${VNET_NAME:-$DEFAULT_VNET_NAME}
-SUBNET_NAME=${SUBNET_NAME:-$DEFAULT_SUBNET_NAME}
-DNS_SUBSCRIPTION_ID=${DNS_SUBSCRIPTION_ID:-$DNS_SUBSCRIPTION_ID}
-DNS_RESOURCE_GROUP=${DNS_RESOURCE_GROUP:-$DNS_RESOURCE_GROUP}
-DNS_ZONE_NAME=${DNS_ZONE_NAME:-$DEFAULT_DNS_ZONE_NAME}
-CONTAINER_NAME=${CONTAINER_NAME:-$DEFAULT_CONTAINER_NAME}
+# Validate all required parameters are set
+for var in RESOURCE_GROUP LOCATION STORAGE_ACCOUNT_NAME VNET_NAME SUBNET_NAME DNS_SUBSCRIPTION_ID DNS_RESOURCE_GROUP DNS_ZONE_NAME CONTAINER_NAME; do
+    if [ -z "${!var}" ]; then
+        echo -e "${RED}Error: Missing required parameter: $var${NC}"
+        usage
+    fi
+done
+
+# Derived variables (no defaults here either)
 PRIVATE_ENDPOINT_NAME="${STORAGE_ACCOUNT_NAME}-pe"
 DNS_RECORD_NAME="${STORAGE_ACCOUNT_NAME}"
-
-# Validate required variables
-if [ -z "$RESOURCE_GROUP" ] || [ -z "$DNS_SUBSCRIPTION_ID" ] || [ -z "$DNS_RESOURCE_GROUP" ]; then
-    echo -e "${RED}Error: Missing required parameters (resourceGroup, dnsSubscriptionId, dnsResourceGroup)${NC}"
-    usage
-fi
 
 echo -e "${GREEN}Starting deployment with the following settings:${NC}"
 echo "Resource Group: $RESOURCE_GROUP"
