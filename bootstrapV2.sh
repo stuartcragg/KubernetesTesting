@@ -18,16 +18,16 @@ check_status() {
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 [-f <params_file>] [-r <resource_group>] [-l <location>] [-s <storage_account_name>] [-v <vnet_name>] [-n <subnet_name>] [-d <dns_subscription_id>] [-g <dns_resource_group>] [-z <dns_zone_name>] [-c <container_name>]"
+    echo "Usage: $0 [-f <params_file>] [-r <resource_group>] [-l <location>] [-s <storage_account_name>] [-v <vnet_name>] [-n <subnet_name>] [-p <private_endpoint_name>] [-d <dns_subscription_id>] [-g <dns_resource_group>] [-z <dns_zone_name>] [-c <container_name>]"
     echo "  -f: Path to parameters file (e.g., params_dev.json)"
-    echo "  Required parameters: resourceGroup, location, storageAccountName, vnetName, subnetName, dnsSubscriptionId, dnsResourceGroup, dnsZoneName, containerName"
+    echo "  Required parameters: resourceGroup, location, storageAccountName, vnetName, subnetName, privateEndpointName, dnsSubscriptionId, dnsResourceGroup, dnsZoneName, containerName"
     echo "  Example with file: $0 -f params_dev.json"
-    echo "  Example with args: $0 -r my-rg -l eastus -s mystorage123 -v my-vnet -n my-subnet -d <dns-sub-id> -g dns-rg -z privatelink.blob.core.windows.net -c tfstate"
+    echo "  Example with args: $0 -r my-rg -l eastus -s mystorage123 -v my-vnet -n my-subnet -p mystorage123-pe -d <dns-sub-id> -g dns-rg -z privatelink.blob.core.windows.net -c tfstate"
     exit 1
 }
 
 # Parse command-line arguments
-while getopts "f:r:l:s:v:n:d:g:z:c:h" opt; do
+while getopts "f:r:l:s:v:n:p:d:g:z:c:h" opt; do
     case $opt in
         f) PARAMS_FILE="$OPTARG";;
         r) RESOURCE_GROUP="$OPTARG";;
@@ -35,6 +35,7 @@ while getopts "f:r:l:s:v:n:d:g:z:c:h" opt; do
         s) STORAGE_ACCOUNT_NAME="$OPTARG";;
         v) VNET_NAME="$OPTARG";;
         n) SUBNET_NAME="$OPTARG";;
+        p) PRIVATE_ENDPOINT_NAME="$OPTARG";;
         d) DNS_SUBSCRIPTION_ID="$OPTARG";;
         g) DNS_RESOURCE_GROUP="$OPTARG";;
         z) DNS_ZONE_NAME="$OPTARG";;
@@ -56,6 +57,7 @@ if [ -n "$PARAMS_FILE" ]; then
     STORAGE_ACCOUNT_NAME=$(jq -r '.storageAccountName // empty' "$PARAMS_FILE")
     VNET_NAME=$(jq -r '.vnetName // empty' "$PARAMS_FILE")
     SUBNET_NAME=$(jq -r '.subnetName // empty' "$PARAMS_FILE")
+    PRIVATE_ENDPOINT_NAME=$(jq -r '.privateEndpointName // empty' "$PARAMS_FILE")
     DNS_SUBSCRIPTION_ID=$(jq -r '.dnsSubscriptionId // empty' "$PARAMS_FILE")
     DNS_RESOURCE_GROUP=$(jq -r '.dnsResourceGroup // empty' "$PARAMS_FILE")
     DNS_ZONE_NAME=$(jq -r '.dnsZoneName // empty' "$PARAMS_FILE")
@@ -63,15 +65,14 @@ if [ -n "$PARAMS_FILE" ]; then
 fi
 
 # Validate all required parameters are set
-for var in RESOURCE_GROUP LOCATION STORAGE_ACCOUNT_NAME VNET_NAME SUBNET_NAME DNS_SUBSCRIPTION_ID DNS_RESOURCE_GROUP DNS_ZONE_NAME CONTAINER_NAME; do
+for var in RESOURCE_GROUP LOCATION STORAGE_ACCOUNT_NAME VNET_NAME SUBNET_NAME PRIVATE_ENDPOINT_NAME DNS_SUBSCRIPTION_ID DNS_RESOURCE_GROUP DNS_ZONE_NAME CONTAINER_NAME; do
     if [ -z "${!var}" ]; then
         echo -e "${RED}Error: Missing required parameter: $var${NC}"
         usage
     fi
 done
 
-# Derived variables (no defaults here either)
-PRIVATE_ENDPOINT_NAME="${STORAGE_ACCOUNT_NAME}-pe"
+# Derived variables
 DNS_RECORD_NAME="${STORAGE_ACCOUNT_NAME}"
 
 echo -e "${GREEN}Starting deployment with the following settings:${NC}"
@@ -80,6 +81,7 @@ echo "Location: $LOCATION"
 echo "Storage Account: $STORAGE_ACCOUNT_NAME"
 echo "VNet: $VNET_NAME"
 echo "Subnet: $SUBNET_NAME"
+echo "Private Endpoint: $PRIVATE_ENDPOINT_NAME"
 echo "DNS Subscription: $DNS_SUBSCRIPTION_ID"
 echo "DNS Resource Group: $DNS_RESOURCE_GROUP"
 echo "DNS Zone: $DNS_ZONE_NAME"
