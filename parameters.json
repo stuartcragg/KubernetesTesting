@@ -1,0 +1,11 @@
+{
+    "resourceGroup": "dev-rg",
+    "location": "eastus",
+    "storageAccountName": "mystoragedev123",
+    "vnetName": "dev-vnet",
+    "subnetName": "dev-subnet",
+    "dnsSubscriptionId": "<dns-subscription-id>",
+    "dnsResourceGroup": "dns-rg",
+    "dnsZoneName": "privatelink.blob.core.windows.net",
+    "containerName": "tfstate-dev"
+}
